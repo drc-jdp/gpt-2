@@ -88,6 +88,7 @@ def main():
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
     config.graph_options.rewrite_options.layout_optimizer = rewriter_config_pb2.RewriterConfig.OFF
+
     with tf.Session(config=config) as sess:
         context = tf.placeholder(tf.int32, [args.batch_size, None])
         context_in = randomize(context, hparams, args.noise)
@@ -185,6 +186,7 @@ def main():
             # Sample from validation set once with fixed seed to make
             # it deterministic during training as well as across runs.
             val_data_sampler = Sampler(val_chunks, seed=1)
+            # batch size = 2 , batchcount = 40
             val_batches = [[val_data_sampler.sample(1024) for _ in range(args.val_batch_size)]
                            for _ in range(args.val_batch_count)]
 
@@ -258,6 +260,16 @@ def main():
             while True:
                 if counter % args.save_every == 0:
                     save()
+                    ls_c = counter - args.save_every*5
+                    if ls_c > 0 :
+                        fn = "model-" + str(ls_c)
+                        for s in [".data-00000-of-00001", ".index", ".meta"]:
+                            full_str = os.path.join(CHECKPOINT_DIR, args.run_name, fn+s)
+                            if os.path.isfile(full_str):
+                                os.remove(full_str)
+                                print('remove', full_str)
+                            else:
+                                print(full_str, "not exist.")
                 if counter % args.sample_every == 0:
                     generate_samples()
                 if args.val_every > 0 and (counter % args.val_every == 0 or counter == 1):

@@ -3,8 +3,8 @@ import numpy as np
 import os
 import tensorflow as tf
 import tqdm
-
-
+# path = dataset
+# combine = 50000
 def load_dataset(enc, path, combine, encoding=None):
     paths = []
     if os.path.isfile(path):
@@ -31,6 +31,7 @@ def load_dataset(enc, path, combine, encoding=None):
             # Plain text
             with open(path, 'r', encoding=encoding) as fp:
                 raw_text += fp.read()
+            # combine several file to one file if size is smaller than combine
             if len(raw_text) >= combine:
                 tokens = np.stack(enc.encode(raw_text))
                 token_chunks.append(tokens)
@@ -62,13 +63,19 @@ class Sampler(object):
     but without crossing chunk boundaries."""
 
     def __init__(self, chunks, seed=None):
+        # ex: 2 .npz files {A} , {B}
+        # chunks = [ A , B ]
+        # total_size = size(A) + size(B)
+        # boundaries = [ 0 , size(A) , size(B) ]
         self.chunks = chunks
         self.total_size = sum(chunk.shape[0] for chunk in chunks)
         self.boundaries = [0]
+        # the beginning of each file
         for i in range(len(chunks)):
             self.boundaries.append(self.boundaries[-1] + chunks[i].shape[0])
         self.rs = np.random.RandomState(seed=seed)
 
+    # random get tokens with length length in one file
     def sample(self, length):
         assert length < self.total_size // len(
             self.chunks
