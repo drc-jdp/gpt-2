@@ -16,7 +16,7 @@ from load_dataset import load_dataset, Sampler
 from accumulate import AccumulatingOptimizer
 import memory_saving_gradients
 
-CHECKPOINT_DIR = 'checkpoint'
+CHECKPOINT_DIR = ''
 SAMPLE_DIR = 'samples'
 
 
@@ -238,12 +238,27 @@ def main():
             losses = []
             for batch in tqdm.tqdm(val_batches):
                 losses.append(sess.run(val_loss, feed_dict={val_context: batch}))
+
+                # vo = model.model(hparams=hparams, X=np.stack(batch))
+                # print("softmax")
+                # print(vo['logits'][:, :-1])
+                # print(vo['logits'][:, :-1].eval())
+                # v_logits = np.array(vo['logits'][:, :-1].eval()) # 2, 1023, 50257
+                # label = (np.array(batch)[:, 1:]) # 2, 1023
+                # v_prop = tf.nn.softmax(vo['logits']) # 2, 1023, 50257
+
+                # count_loss = [0, 0]
+                # for i in range(2):
+                #     for j in range(1023):
+                #         #print(j)
+                #         count_loss[i] -= tf.log( v_prop[i][j][label[i][j]] )
+
             v_val_loss = np.mean(losses)
             v_summary = sess.run(val_loss_summary, feed_dict={val_loss: v_val_loss})
             summary_log.add_summary(v_summary, counter)
             summary_log.flush()
             print(
-                '[{counter} | {time:2.2f}] validation loss = {loss:2.2f}'
+                '[{counter} | {time:2.2f}] validation loss = {loss:.10f}'
                 .format(
                     counter=counter,
                     time=time.time() - start_time,

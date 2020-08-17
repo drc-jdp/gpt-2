@@ -1,3 +1,50 @@
+how to count loss
+how long to train
+- => see loss by time
+  - -> converge or not
+
+---
+
+## validation
+-  need approve?:
+  - use the same tokens all the time.
+
+---
+
+## size
+- val_batches: val_batch_count, val_batch_size, n_ctx
+- label: val_batch_size, n_ctx
+  - value = [0, n_vocab-1]
+- model_output:
+  - "logits": val_batch_size, n_ctx, n_vocab
+  - use tf.nn.softmax(mo['logits']) to transfer into probability
+
+---
+
+## cost
+- let n_ctx = 5
+- let batch_size = 1
+- ex:
+```
+model input = [5, 18, 55, 30, 101]
+model output logits: 1* 5* 50257
+transfer it into prob. => mo_prob
+cost = -sigma[ ln(mo_prob[0][0][ model_input[1:] ] ) ] / (4*1)
+```
+```
+model_input: 5 18 55 30 101
+                ^  ^  ^  ^
+                |  |  |  |
+model_output:   a  b  c  d  e
+```
+
+---
+
+## model.py
+- batch = batch_size
+- sequence = sequence_length (n_ctx)
+
+---------------------
 
 Reference:  ["Beginner’s Guide to Retrain GPT-2 (117M) to Generate Custom Text Content"](https://medium.com/@ngwaifoong92/beginners-guide-to-retrain-gpt-2-117m-to-generate-custom-text-content-8bb5363d8b7f)
 
