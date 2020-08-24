@@ -16,7 +16,7 @@ from load_dataset import load_dataset, Sampler
 from accumulate import AccumulatingOptimizer
 import memory_saving_gradients
 
-CHECKPOINT_DIR = ''
+CHECKPOINT_DIR = '../storage'
 SAMPLE_DIR = 'samples'
 
 
@@ -169,7 +169,8 @@ def main():
         else:
             ckpt = tf.train.latest_checkpoint(args.restore_from)
         print('Loading checkpoint', ckpt)
-        saver.restore(sess, ckpt)
+        if args.restore_from != 'no':
+            saver.restore(sess, ckpt)
 
         print('Loading dataset...')
         chunks = load_dataset(enc, args.dataset, args.combine, encoding=args.encoding)
@@ -257,7 +258,7 @@ def main():
             v_summary = sess.run(val_loss_summary, feed_dict={val_loss: v_val_loss})
             summary_log.add_summary(v_summary, counter)
             summary_log.flush()
-            print(
+            logFile.write(
                 '[{counter} | {time:2.2f}] validation loss = {loss:.10f}'
                 .format(
                     counter=counter,
@@ -272,9 +273,17 @@ def main():
         start_time = time.time()
 
         try:
+            logFile = open('log.txt', 'w')
             while True:
                 if counter % args.save_every == 0:
                     save()
+                    logFile.write(
+                        "save model {counter} to {CHECKPOINT_DIR}/{run_name}\n"
+                        .format(
+                            counter=counter,
+                            CHECKPOINT_DIR=CHECKPOINT_DIR,
+                            run_name=args.run_name))
+                    logFile.flush()
                     ls_c = counter - args.save_every*5
                     if ls_c > 0 :
                         fn = "model-" + str(ls_c)
@@ -318,7 +327,9 @@ def main():
         except KeyboardInterrupt:
             print('interrupted')
             save()
-
+        except:
+            import sys
+            print('syserr', sys.exc_info()[0])
 
 if __name__ == '__main__':
     main()
