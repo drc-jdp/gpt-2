@@ -15,7 +15,7 @@
 3. push to GitHub, start CI/CD automatically
 4. type on server 
 ```bash
-docker run -e RESTORE_FROM={ RF } -e LEARNING_RATE={ LR }\
+docker run -e RESTORE_FROM={ RF } -e LEARNING_RATE={ LR } \
 -itd -v {_local_dir_to_save_your_model_}:/home/storage/training --name dtp-training yqchenee/dtp-training:{tag}
 ``` 
 >  self-hosted?
