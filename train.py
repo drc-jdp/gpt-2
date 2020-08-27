@@ -185,10 +185,10 @@ def main():
 
         def save():
             maketree(os.path.join(CHECKPOINT_DIR, args.run_name))
-            print(
-                'Saving',
-                os.path.join(CHECKPOINT_DIR, args.run_name,
-                             'model-{}').format(counter))
+            with open(
+                    os.path.join(CHECKPOINT_DIR, args.run_name, 'log'), 'a', encoding=args.encoding) as fp:
+                fp.write(f"save model {counter}\n")
+            
             saver.save(
                 sess,
                 os.path.join(CHECKPOINT_DIR, args.run_name, 'model'),
@@ -197,7 +197,6 @@ def main():
                 fp.write(str(counter) + '\n')
 
         def generate_samples():
-            print('Generating samples...')
             context_tokens = data_sampler.sample(1)
             all_text = []
             index = 0
@@ -211,7 +210,6 @@ def main():
                         index + 1, text)
                     all_text.append(text)
                     index += 1
-            print(text)
             maketree(os.path.join(SAMPLE_DIR, args.run_name))
             with open(
                     os.path.join(SAMPLE_DIR, args.run_name,
@@ -219,7 +217,6 @@ def main():
                 fp.write('\n'.join(all_text))
 
         def validation():
-            print('Calculating validation loss...')
             losses = []
             for batch in tqdm.tqdm(val_batches):
                 losses.append(sess.run(val_loss, feed_dict={val_context: batch}))
@@ -228,12 +225,14 @@ def main():
             v_summary = sess.run(val_loss_summary, feed_dict={val_loss: v_val_loss})
             summary_log.add_summary(v_summary, counter)
             summary_log.flush()
-            print(
-                '[{counter} | {time:2.2f}] validation loss = {loss:.10f}'
-                .format(
-                    counter=counter,
-                    time=time.time() - start_time,
-                    loss=v_val_loss))
+            with open(
+                    os.path.join(CHECKPOINT_DIR, args.run_name, 'log'), 'a', encoding=args.encoding) as fp:
+                fp.write(
+                    '[{counter} | {time:2.2f}] validation loss = {loss:.10f}\n'
+                    .format(
+                        counter=counter,
+                        time=time.time() - start_time,
+                        loss=v_val_loss))
 
         def sample_batch():
             return [data_sampler.sample(1024) for _ in range(args.batch_size)]
@@ -252,9 +251,6 @@ def main():
                             full_str = os.path.join(CHECKPOINT_DIR, args.run_name, fn+s)
                             if os.path.isfile(full_str):
                                 os.remove(full_str)
-                                print('remove', full_str)
-                            else:
-                                print(full_str, "not exist.")
                 if counter % args.sample_every == 0:
                     generate_samples()
                 if args.val_every > 0 and (counter % args.val_every == 0 or counter == 1):
@@ -275,14 +271,18 @@ def main():
 
                 avg_loss = (avg_loss[0] * 0.99 + v_loss,
                             avg_loss[1] * 0.99 + 1.0)
-
-                print(
-                    '[{counter} | {time:2.2f}] loss={loss:2.2f} avg={avg:2.2f}'
-                    .format(
-                        counter=counter,
-                        time=time.time() - start_time,
-                        loss=v_loss,
-                        avg=avg_loss[0] / avg_loss[1]))
+                
+                if counter % 10 == 0:
+                    with open(
+                            os.path.join(CHECKPOINT_DIR, args.run_name, 'log'), 'a', encoding=args.encoding) as fp:
+                        fp.write(
+                            '[{counter} | {time:2.2f}] loss={loss:2.2f} avg={avg:2.2f}\n'
+                            .format(
+                                counter=counter,
+                                time=time.time() - start_time,
+                                loss=v_loss,
+                                avg=avg_loss[0] / avg_loss[1])
+                        )
 
                 counter += 1
         except KeyboardInterrupt:
