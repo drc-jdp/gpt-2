@@ -13,11 +13,19 @@
 1. modify the hparams, vocab, encoder in {models/}
 2. modify the model in train.py or src/model.py
 3. push to GitHub, start CI/CD automatically
-4. type on server 
+4. type on server
+  * cpu  
 ```bash
 docker run -e RESTORE_FROM={ RF } -e LEARNING_RATE={ LR } \
 -itd -v {_local_dir_to_save_your_model_}:/home/storage/training --name dtp-training yqchenee/dtp-training:{tag}
-``` 
+```
+  * gpu
+```bash
+nvidia-docker run -e RESTORE_FROM={ RF } -e LEARNING_RATE={ LR } \
+--privileged -itd -v {_local_dir_to_save_your_model_}:/home/storage/training \
+-v /usr/local/nvidia-driver/nvidia_driver/410.129/lib:/usr/local/nvidia/lib -v /usr/local/nvidia-driver/nvidia_driver/410.129/lib64:/usr/local/nvidia/lib64 \
+--name dtp-training yqchenee/dtp-training:{tag}
+```
 >  self-hosted?
 
 ----
