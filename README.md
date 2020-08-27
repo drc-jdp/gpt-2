@@ -1,11 +1,12 @@
 # Docker Usage
 ## model parameter
 1.  --dataset { **dataset** } : the path to your data, both directory and file are ok
-2.  --run_name { **rn** } : dir to save model => CHECKPOINT_DIR/rn
-3.  --restore_from { **rf** } : 
+2.  --run_name { **RN** } : dir to save model => CHECKPOINT_DIR/rn
+3.  --restore_from { **RF** } : 
     * no  : pre-train the model only with the param in models/hparams.json and vocab
     * latest  : train model with pre-trained model from CHECKPOINT_DIR/rf
     * fresh : train model with origin model from models/mn
+4.  --learning_rate { **LR** } : default: 0.00002
 
 ## CI/CD
 1. for **different model**, create new **branch** in GitHub
@@ -14,7 +15,8 @@
 3. push to GitHub, start CI/CD automatically
 4. type on server 
 ```bash
-docker run -e RESTORE_FROM={ rf } -itd -v {_local_dir_to_save_your_model_}:/home/storage/training --name dtp-training yqchenee/dtp-training:{tag}
+docker run -e RESTORE_FROM={ RF } -e LEARNING_RATE={ LR }\
+-itd -v {_local_dir_to_save_your_model_}:/home/storage/training --name dtp-training yqchenee/dtp-training:{tag}
 ``` 
 >  self-hosted?
 
