@@ -2,6 +2,7 @@ __pycache__
 .mypy_cache/
 checkpoint
 samples
+lyrix.txt
 *.zip
 .vscode/
 *.swp
