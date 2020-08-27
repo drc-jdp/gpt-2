@@ -4,10 +4,6 @@ ARG DEFAULT_RESTORE_FROM
 
 ENV RESTORE_FROM=${DEFAULT_RESTORE_FROM}
 
-# RUN apt-get update 
-# RUN apt-get install -y vim
-# RUN apt-get install -y sudo
-
 RUN mkdir /home/gpt-training
 WORKDIR /home/gpt-training 
 
