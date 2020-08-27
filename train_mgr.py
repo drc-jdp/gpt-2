@@ -24,7 +24,7 @@ def main(args):
             f"python train.py --dataset=dataset\
             --save_every=1000 --model_name=ci_training\
             --val_every=500  --val_batch_count=50 --sample_every=1000\
-            --restore_from={args.restore_from} --run_name=training --learning_rate={args.learning_rate}"
+            --restore_from={args.restore_from} --run_name=training --learning_rate={args.learning_rate}\n"
             )
     t = 1
     while True:
