@@ -43,6 +43,9 @@ class Encoder:
     def __init__(self, encoder, bpe_merges, errors='replace'):
         self.encoder = encoder
         self.decoder = {v:k for k,v in self.encoder.items()}
+        # for i in range(50257):
+        #     if i not in self.decoder:
+        #         print('error ', i)
         self.errors = errors # how to handle errors in decoding
         self.byte_encoder = bytes_to_unicode()
         self.byte_decoder = {v:k for k, v in self.byte_encoder.items()}
