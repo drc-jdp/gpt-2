@@ -1,24 +1,31 @@
 # Docker Usage
 ## model parameter
 1.  --dataset { **dataset** } : the path to your data, both directory and file are ok
-2.  --run_name { **rn** } : dir to save model => CHECKPOINT_DIR/rn
-3.  --restore_from { **rf** } : 
+2.  --run_name { **RN** } : dir to save model => CHECKPOINT_DIR/rn
+3.  --restore_from { **RF** } : 
     * no  : pre-train the model only with the param in models/hparams.json and vocab
     * latest  : train model with pre-trained model from CHECKPOINT_DIR/rf
     * fresh : train model with origin model from models/mn
-4.  
+4.  --learning_rate { **LR** } : default: 0.00002
 
 ## CI/CD
 1. for **different model**, create new **branch** in GitHub
 1. modify the hparams, vocab, encoder in {models/}
 2. modify the model in train.py or src/model.py
 3. push to GitHub, start CI/CD automatically
-4. type on server 
+4. type on server
+  * cpu  
+```bash
+docker run -e RESTORE_FROM={ RF } -e LEARNING_RATE={ LR } \
+-itd -v {_local_dir_to_save_your_model_}:/home/storage/training --name dtp-training yqchenee/dtp-training:{tag}
 ```
-docker run image -e RESTORE_FROM={ rf } -itd \  
--v {_local_dir_to_save_your_model_}:/home/storage/training \  
+  * gpu
+```bash
+nvidia-docker run -e RESTORE_FROM={ RF } -e LEARNING_RATE={ LR } \
+--privileged -itd -v {_local_dir_to_save_your_model_}:/home/storage/training \
+-v /usr/local/nvidia-driver/nvidia_driver/410.129/lib:/usr/local/nvidia/lib -v /usr/local/nvidia-driver/nvidia_driver/410.129/lib64:/usr/local/nvidia/lib64 \
 --name dtp-training yqchenee/dtp-training:{tag}
-``` 
+```
 >  self-hosted?
 
 ----
@@ -26,11 +33,15 @@ docker run image -e RESTORE_FROM={ rf } -itd \
 # Run training
 PYTHONPATH=src CUDA_VISIBLE_DEVICES=1 python train.py --dataset dataset --save_every 1000 --model_name=ci_training --val_every=300 --run_name=training
 
-# Improve and Question
-how to count loss
-how long to train
+# Improve and Questions
+### how to count loss
+### how long to train
 - => see loss by time
   - -> converge or not
+## OOM error
+> use python.subprocess to call the program in the while loop
+>> it seems there are no error in the program due to this case,
+>> the program terminate normally and has a return code 0
 
 ---
 
@@ -65,6 +76,22 @@ model_input: 5 18 55 30 101
                 ^  ^  ^  ^
                 |  |  |  |
 model_output:   a  b  c  d  e
+```
+> closer look at cost(val_cost) in train.py- validation()
+```python
+vo = model.model(hparams=hparams, X=np.stack(batch))
+print("softmax")
+print(vo['logits'][:, :-1])
+print(vo['logits'][:, :-1].eval())
+v_logits = np.array(vo['logits'][:, :-1].eval()) # 2, 1023, 50257
+label = (np.array(batch)[:, 1:]) # 2, 1023
+v_prop = tf.nn.softmax(vo['logits']) # 2, 1023, 50257
+
+count_loss = [0, 0]
+for i in range(2):
+    for j in range(1023):
+        print(j)
+        count_loss[i] -= tf.log( v_prop[i][j][label[i][j]] )
 ```
 
 ---

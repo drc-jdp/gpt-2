@@ -18,6 +18,7 @@ parser.add_argument('--encoding', type=str, default='utf-8', help='Set the encod
 parser.add_argument('in_text', metavar='PATH', type=str, help='Input file, directory, or glob pattern (utf-8 text).')
 parser.add_argument('out_npz', metavar='OUT.npz', type=str, help='Output file path')
 
+
 def main():
     args = parser.parse_args()
     enc = encoder.get_encoder(args.model_name)

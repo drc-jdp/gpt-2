@@ -1,7 +1,3 @@
-#!/usr/bin/env python3
-# Usage:
-#  PYTHONPATH=src ./train --dataset <file|directory|glob>
-
 import argparse
 import json
 import os
@@ -69,21 +65,38 @@ def randomize(context, hparams, p):
         return context
 
 
-def main():
-    args = parser.parse_args()
-    enc = encoder.get_encoder(args.model_name)
+def get_hparam(args):
     hparams = model.default_hparams()
     with open(os.path.join('models', args.model_name, 'hparams.json')) as f:
         hparams.override_from_dict(json.load(f))
+    return hparams
+
+
+def get_ckpt(args):
+    if args.restore_from == 'latest':
+        ckpt = tf.train.latest_checkpoint(
+            os.path.join(CHECKPOINT_DIR, args.run_name))
+        if ckpt is None:
+            # Get fresh GPT weights if new run.
+            ckpt = tf.train.latest_checkpoint(
+                os.path.join('models', args.model_name))
+    elif args.restore_from == 'fresh':
+        ckpt = tf.train.latest_checkpoint(
+            os.path.join('models', args.model_name))
+    else:
+        ckpt = tf.train.latest_checkpoint(args.restore_from)
+    return ckpt
+
+
+def main():
+    args = parser.parse_args()
+    enc = encoder.get_encoder(args.model_name)
+    hparams = get_hparam(args)
+    ckpt = get_ckpt(args)
 
     if args.sample_length > hparams.n_ctx:
         raise ValueError(
             "Can't get samples longer than window size: %s" % hparams.n_ctx)
-
-    if args.model_name == '345M':
-        args.memory_saving_gradients = True
-        if args.optimizer == 'adam':
-            args.only_train_transformer_layers = True
 
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
@@ -105,7 +118,6 @@ def main():
                     labels=val_context[:, 1:], logits=val_output['logits'][:, :-1]))
             val_loss_summary = tf.summary.scalar('val_loss', val_loss)
 
-
         tf_sample = sample.sample_sequence(
             hparams=hparams,
             length=args.sample_length,
@@ -118,31 +130,15 @@ def main():
         all_vars = [v for v in tf.trainable_variables() if 'model' in v.name]
         train_vars = [v for v in all_vars if '/h' in v.name] if args.only_train_transformer_layers else all_vars
 
-        if args.optimizer == 'adam':
-            opt = tf.train.AdamOptimizer(learning_rate=args.learning_rate)
-        elif args.optimizer == 'sgd':
-            opt = tf.train.GradientDescentOptimizer(learning_rate=args.learning_rate)
-        else:
-            exit('Bad optimizer:', args.optimizer)
+        opt = tf.train.AdamOptimizer(learning_rate=args.learning_rate)
 
-        if args.accumulate_gradients > 1:
-            if args.memory_saving_gradients:
-                exit("Memory saving gradients are not implemented for gradient accumulation yet.")
-            opt = AccumulatingOptimizer(
-                opt=opt,
-                var_list=train_vars)
-            opt_reset = opt.reset()
-            opt_compute = opt.compute_gradients(loss)
-            opt_apply = opt.apply_gradients()
-            summary_loss = tf.summary.scalar('loss', opt_apply)
+        if args.memory_saving_gradients:
+            opt_grads = memory_saving_gradients.gradients(loss, train_vars)
         else:
-            if args.memory_saving_gradients:
-                opt_grads = memory_saving_gradients.gradients(loss, train_vars)
-            else:
-                opt_grads = tf.gradients(loss, train_vars)
-            opt_grads = list(zip(opt_grads, train_vars))
-            opt_apply = opt.apply_gradients(opt_grads)
-            summary_loss = tf.summary.scalar('loss', loss)
+            opt_grads = tf.gradients(loss, train_vars)
+        opt_grads = list(zip(opt_grads, train_vars))
+        opt_apply = opt.apply_gradients(opt_grads)
+        summary_loss = tf.summary.scalar('loss', loss)
 
         summary_lr = tf.summary.scalar('learning_rate', args.learning_rate)
         summaries = tf.summary.merge([summary_lr, summary_loss])
@@ -156,18 +152,6 @@ def main():
             keep_checkpoint_every_n_hours=2)
         sess.run(tf.global_variables_initializer())
 
-        if args.restore_from == 'latest':
-            ckpt = tf.train.latest_checkpoint(
-                os.path.join(CHECKPOINT_DIR, args.run_name))
-            if ckpt is None:
-                # Get fresh GPT weights if new run.
-                ckpt = tf.train.latest_checkpoint(
-                    os.path.join('models', args.model_name))
-        elif args.restore_from == 'fresh':
-            ckpt = tf.train.latest_checkpoint(
-                os.path.join('models', args.model_name))
-        else:
-            ckpt = tf.train.latest_checkpoint(args.restore_from)
         print('Loading checkpoint', ckpt)
         if args.restore_from != 'no':
             saver.restore(sess, ckpt)
@@ -201,10 +185,10 @@ def main():
 
         def save():
             maketree(os.path.join(CHECKPOINT_DIR, args.run_name))
-            print(
-                'Saving',
-                os.path.join(CHECKPOINT_DIR, args.run_name,
-                             'model-{}').format(counter))
+            with open(
+                    os.path.join(CHECKPOINT_DIR, args.run_name, 'log'), 'a', encoding=args.encoding) as fp:
+                fp.write(f"save model {counter}\n")
+            
             saver.save(
                 sess,
                 os.path.join(CHECKPOINT_DIR, args.run_name, 'model'),
@@ -213,7 +197,6 @@ def main():
                 fp.write(str(counter) + '\n')
 
         def generate_samples():
-            print('Generating samples...')
             context_tokens = data_sampler.sample(1)
             all_text = []
             index = 0
@@ -227,7 +210,6 @@ def main():
                         index + 1, text)
                     all_text.append(text)
                     index += 1
-            print(text)
             maketree(os.path.join(SAMPLE_DIR, args.run_name))
             with open(
                     os.path.join(SAMPLE_DIR, args.run_name,
@@ -235,65 +217,40 @@ def main():
                 fp.write('\n'.join(all_text))
 
         def validation():
-            print('Calculating validation loss...')
             losses = []
             for batch in tqdm.tqdm(val_batches):
                 losses.append(sess.run(val_loss, feed_dict={val_context: batch}))
-
-                # vo = model.model(hparams=hparams, X=np.stack(batch))
-                # print("softmax")
-                # print(vo['logits'][:, :-1])
-                # print(vo['logits'][:, :-1].eval())
-                # v_logits = np.array(vo['logits'][:, :-1].eval()) # 2, 1023, 50257
-                # label = (np.array(batch)[:, 1:]) # 2, 1023
-                # v_prop = tf.nn.softmax(vo['logits']) # 2, 1023, 50257
-
-                # count_loss = [0, 0]
-                # for i in range(2):
-                #     for j in range(1023):
-                #         #print(j)
-                #         count_loss[i] -= tf.log( v_prop[i][j][label[i][j]] )
 
             v_val_loss = np.mean(losses)
             v_summary = sess.run(val_loss_summary, feed_dict={val_loss: v_val_loss})
             summary_log.add_summary(v_summary, counter)
             summary_log.flush()
-            logFile.write(
-                '[{counter} | {time:2.2f}] validation loss = {loss:.10f}'
-                .format(
-                    counter=counter,
-                    time=time.time() - start_time,
-                    loss=v_val_loss))
+            with open(
+                    os.path.join(CHECKPOINT_DIR, args.run_name, 'log'), 'a', encoding=args.encoding) as fp:
+                fp.write(
+                    '[{counter} | {time:2.2f}] validation loss = {loss:.10f}\n'
+                    .format(
+                        counter=counter,
+                        time=time.time() - start_time,
+                        loss=v_val_loss))
 
         def sample_batch():
             return [data_sampler.sample(1024) for _ in range(args.batch_size)]
-
 
         avg_loss = (0.0, 0.0)
         start_time = time.time()
 
         try:
-            logFile = open('log.txt', 'w')
             while True:
                 if counter % args.save_every == 0:
                     save()
-                    logFile.write(
-                        "save model {counter} to {CHECKPOINT_DIR}/{run_name}\n"
-                        .format(
-                            counter=counter,
-                            CHECKPOINT_DIR=CHECKPOINT_DIR,
-                            run_name=args.run_name))
-                    logFile.flush()
                     ls_c = counter - args.save_every*5
-                    if ls_c > 0 :
+                    if ls_c > 0:
                         fn = "model-" + str(ls_c)
                         for s in [".data-00000-of-00001", ".index", ".meta"]:
                             full_str = os.path.join(CHECKPOINT_DIR, args.run_name, fn+s)
                             if os.path.isfile(full_str):
                                 os.remove(full_str)
-                                print('remove', full_str)
-                            else:
-                                print(full_str, "not exist.")
                 if counter % args.sample_every == 0:
                     generate_samples()
                 if args.val_every > 0 and (counter % args.val_every == 0 or counter == 1):
@@ -314,22 +271,24 @@ def main():
 
                 avg_loss = (avg_loss[0] * 0.99 + v_loss,
                             avg_loss[1] * 0.99 + 1.0)
-
-                print(
-                    '[{counter} | {time:2.2f}] loss={loss:2.2f} avg={avg:2.2f}'
-                    .format(
-                        counter=counter,
-                        time=time.time() - start_time,
-                        loss=v_loss,
-                        avg=avg_loss[0] / avg_loss[1]))
+                
+                if counter % 10 == 0:
+                    with open(
+                            os.path.join(CHECKPOINT_DIR, args.run_name, 'log'), 'a', encoding=args.encoding) as fp:
+                        fp.write(
+                            '[{counter} | {time:2.2f}] loss={loss:2.2f} avg={avg:2.2f}\n'
+                            .format(
+                                counter=counter,
+                                time=time.time() - start_time,
+                                loss=v_loss,
+                                avg=avg_loss[0] / avg_loss[1])
+                        )
 
                 counter += 1
         except KeyboardInterrupt:
             print('interrupted')
             save()
-        except:
-            import sys
-            print('syserr', sys.exc_info()[0])
+
 
 if __name__ == '__main__':
     main()

@@ -1,0 +1,9 @@
+PYTHONPATH=src CUDA_VISIBLE_DEVICES=0 python train.py --dataset drc_v3.npz --save_every 1000 --model_name=bpe-test --val_every=300 --run_name=run_v3 --learning_rate=0.00001
+
+# pre-train
+PYTHONPATH=src CUDA_VISIBLE_DEVICES=1 python pre-train.py --dataset drc_v3.npz --save_every 1000 --model_name=pre-train --val_every=3000 --val_batch_count=20 --sample_every=1000  --run_name=run_v3_no --learning_rate=0.00025 --memory_saving
+
+# restore_from=no
+PYTHONPATH=src CUDA_VISIBLE_DEVICES=1 python pre-train.py --dataset drc_v3.npz --save_every 1000 --model_name=pre-train --val_every=3000 --val_batch_count=20 --sample_every=1000  --run_name=test --restore_from=no --learning_rate=0.00025 --memory_saving
+
+nvidia-docker run --privileged -itd -v /tmp2/cilinh/tensorflow/:/home/tensorflow/storage -v /usr/local/nvidia-driver/nvidia_driver/410.129/lib:/usr/local/nvidia/lib -v /usr/local/nvidia-driver/nvidia_driver/410.129/lib64:/usr/local/nvidia/lib64 -p 3222:22 --name=pre-train b161d964bf76

@@ -3,6 +3,7 @@ on:
   push:
     branches:
     - master
+    - CI
     tags:
       - v1.*
   pull_request:

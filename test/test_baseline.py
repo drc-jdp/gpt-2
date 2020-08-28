@@ -1,23 +1,24 @@
 import pytest
 import requests
+import re
 
 
 def t_expected_output(url: str, text: str, expect: str):
     text = text.strip()
-    # results = []
     response = requests.post(f"{url}/autocomplete", json={
         "text": text
     })
     if response.status_code > 200:
         assert False, "http request should success"
         return
-    result: dict = response.json()
-    assert "result" in result, "response should have key result"
-    # results.append(result.get("result"))
-    # assert len(results) == 10, "should have exact 10 prediction results"
-    # for result in results:
-    found = list(filter(lambda x: expect in x, result.get("result")))
-    assert found, f"should suggest {expect} ({result})"
+    results: dict = response.json()
+    assert "result" in results, "response should have key result"
+    results = results.get("result")
+    for result in results:
+        found = re.search(expect, result)
+        if found:
+            break
+    assert found, f"should suggest {expect} ({results})"
 
 
 def test_reference_obp(url: str):
@@ -38,6 +39,7 @@ def test_reference_M1W(url: str):
 
 def test_reference_M1S(url: str):
     t_expected_output(url, "M1.S.12 { @", "Space")
+    t_expected_output(url, "M1.S.12", " { @ Space")
 
 
 def test_IFO(url: str):
@@ -76,8 +78,48 @@ def test_netarea(url: str):
     t_expected_output(url, "NET AREA", "RATIO")
 
 
-def test(url: str):
+def test_cumulative(url: str):
+    t_expected_output(url, "cumulative", "area")
+
+
+def test_dExclamation(url: str):
+    t_expected_output(url, "  !!", "A.EA[(]")
+    t_expected_output(url, "!!", "A.EA[(]")
+    t_expected_output(url, "[\n  !!", "AREA[(]")
+
+
+def test_riskFloating(url: str):
     t_expected_output(url, "A.R.8.3:M17_M0", "{ @ Risk_Floating_net")
+
+
+def test_dumVia(url: str):
+    t_expected_output(
+        url,
+        "DENSITY DUMVIA",
+        "[0-9]+ DUM[0-9]+ < UBM_R_[0-9]+ INSIDE"
+    )
+
+
+def test_density(url: str):
+    t_expected_output(
+        url,
+        "A10 = DENSITY DUMVIA10 DUM10 < UBM_R_7 INSIDE OF LAYER CHIPx PRINT \
+            UBM.R.7_DVIA10DM10.density",
+        r"\n[\s]+\[AREA\(DUM"
+    )
+
+
+def test_shape_angle(url: str):
+    t_expected_output(
+        url,
+        "G.3:CO_SRAM51 { @ Shapes must be orthogonal or on a 45 degree angle.",
+        r"\n[\s]+ANGLE CO_SRAM51.*[>|<]"
+    )
+    t_expected_output(
+        url,
+        "{ @ Shapes must be orthogonal or on a 45 degree angle.",
+        r"ANGLE.*[>|<]"
+    )
 
 
 def test_reference_consistent(url: str):

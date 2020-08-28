@@ -1,8 +1,10 @@
 FROM tensorflow/tensorflow:1.15.2-gpu-py3-jupyter
 
 ARG DEFAULT_RESTORE_FROM
+ARG DEFAULT_LEARNING_RATE
 
 ENV RESTORE_FROM=${DEFAULT_RESTORE_FROM}
+ENV LEARNING_RATE=${DEFAULT_LEARNING_RATE}
 
 RUN mkdir /home/gpt-training
 WORKDIR /home/gpt-training 
@@ -29,4 +31,4 @@ COPY models/* ./models/ci_training/
 
 RUN pip install -r requirements.txt
 
-CMD /bin/bash /bin/boot.sh ${RESTORE_FROM:-no}
+CMD /bin/bash /bin/boot.sh ${RESTORE_FROM:-no} ${LEARNING_RATE:-}
