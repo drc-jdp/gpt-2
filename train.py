@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import sys
 import numpy as np
 import tensorflow as tf
 import time
@@ -73,18 +74,11 @@ def get_hparam(args):
 
 
 def get_ckpt(args):
+    # restore from the dir where model saving
+    ckpt = None
     if args.restore_from == 'latest':
         ckpt = tf.train.latest_checkpoint(
             os.path.join(CHECKPOINT_DIR, args.run_name))
-        if ckpt is None:
-            # Get fresh GPT weights if new run.
-            ckpt = tf.train.latest_checkpoint(
-                os.path.join('models', args.model_name))
-    elif args.restore_from == 'fresh':
-        ckpt = tf.train.latest_checkpoint(
-            os.path.join('models', args.model_name))
-    else:
-        ckpt = tf.train.latest_checkpoint(args.restore_from)
     return ckpt
 
 
@@ -103,6 +97,7 @@ def main():
     config.graph_options.rewrite_options.layout_optimizer = rewriter_config_pb2.RewriterConfig.OFF
 
     with tf.Session(config=config) as sess:
+        # init training tensor
         context = tf.placeholder(tf.int32, [args.batch_size, None])
         context_in = randomize(context, hparams, args.noise)
         output = model.model(hparams=hparams, X=context_in)
@@ -110,6 +105,7 @@ def main():
             tf.nn.sparse_softmax_cross_entropy_with_logits(
                 labels=context[:, 1:], logits=output['logits'][:, :-1]))
 
+        # init val tensor
         if args.val_every > 0:
             val_context = tf.placeholder(tf.int32, [args.val_batch_size, None])
             val_output = model.model(hparams=hparams, X=val_context)
@@ -118,6 +114,7 @@ def main():
                     labels=val_context[:, 1:], logits=val_output['logits'][:, :-1]))
             val_loss_summary = tf.summary.scalar('val_loss', val_loss)
 
+        # init sample tensor
         tf_sample = sample.sample_sequence(
             hparams=hparams,
             length=args.sample_length,
@@ -130,8 +127,8 @@ def main():
         all_vars = [v for v in tf.trainable_variables() if 'model' in v.name]
         train_vars = [v for v in all_vars if '/h' in v.name] if args.only_train_transformer_layers else all_vars
 
+        # init training
         opt = tf.train.AdamOptimizer(learning_rate=args.learning_rate)
-
         if args.memory_saving_gradients:
             opt_grads = memory_saving_gradients.gradients(loss, train_vars)
         else:
@@ -139,10 +136,8 @@ def main():
         opt_grads = list(zip(opt_grads, train_vars))
         opt_apply = opt.apply_gradients(opt_grads)
         summary_loss = tf.summary.scalar('loss', loss)
-
         summary_lr = tf.summary.scalar('learning_rate', args.learning_rate)
         summaries = tf.summary.merge([summary_lr, summary_loss])
-
         summary_log = tf.summary.FileWriter(
             os.path.join(CHECKPOINT_DIR, args.run_name))
 
@@ -151,32 +146,6 @@ def main():
             max_to_keep=5,
             keep_checkpoint_every_n_hours=2)
         sess.run(tf.global_variables_initializer())
-
-        print('Loading checkpoint', ckpt)
-        if args.restore_from != 'no':
-            saver.restore(sess, ckpt)
-        else:
-            save()
-
-        print('Loading dataset...')
-        chunks = load_dataset(enc, args.dataset, args.combine, encoding=args.encoding)
-        data_sampler = Sampler(chunks)
-        if args.val_every > 0:
-            if args.val_dataset:
-                print('Loading validation dataset...')
-                val_chunks = load_dataset(enc, args.val_dataset, args.combine, encoding=args.encoding)
-            else:
-                val_chunks = chunks
-        print('dataset has', data_sampler.total_size, 'tokens')
-        print('Training...')
-
-        if args.val_every > 0:
-            # Sample from validation set once with fixed seed to make
-            # it deterministic during training as well as across runs.
-            val_data_sampler = Sampler(val_chunks, seed=1)
-            print('validation data has ', val_data_sampler.total_size, ' tokens')
-            val_batches = [[val_data_sampler.sample(1024) for _ in range(args.val_batch_size)]
-                           for _ in range(args.val_batch_count)]
 
         counter = 1
         counter_path = os.path.join(CHECKPOINT_DIR, args.run_name, 'counter')
@@ -189,7 +158,6 @@ def main():
             with open(
                     os.path.join(CHECKPOINT_DIR, args.run_name, 'log'), 'a', encoding=args.encoding) as fp:
                 fp.write(f"save model {counter}\n")
-            
             saver.save(
                 sess,
                 os.path.join(CHECKPOINT_DIR, args.run_name, 'model'),
@@ -238,9 +206,35 @@ def main():
         def sample_batch():
             return [data_sampler.sample(1024) for _ in range(args.batch_size)]
 
+        print('Loading checkpoint', ckpt)
+        if ckpt is not None:
+            saver.restore(sess, ckpt)
+        else:
+            save()
+            sys.exit()
+
+        print('Loading dataset...')
+        chunks = load_dataset(enc, args.dataset, args.combine, encoding=args.encoding)
+        data_sampler = Sampler(chunks)
+        if args.val_every > 0:
+            if args.val_dataset:
+                print('Loading validation dataset...')
+                val_chunks = load_dataset(enc, args.val_dataset, args.combine, encoding=args.encoding)
+            else:
+                val_chunks = chunks
+        print('dataset has', data_sampler.total_size, 'tokens')
+
+        if args.val_every > 0:
+            # Sample from validation set once with fixed seed to make
+            # it deterministic during training as well as across runs.
+            val_data_sampler = Sampler(val_chunks, seed=1)
+            print('validation data has ', val_data_sampler.total_size, ' tokens')
+            val_batches = [[val_data_sampler.sample(1024) for _ in range(args.val_batch_size)]
+                           for _ in range(args.val_batch_count)]
+
+        print('Training...')
         avg_loss = (0.0, 0.0)
         start_time = time.time()
-
         try:
             while True:
                 if counter % args.save_every == 0:
@@ -272,7 +266,7 @@ def main():
 
                 avg_loss = (avg_loss[0] * 0.99 + v_loss,
                             avg_loss[1] * 0.99 + 1.0)
-                
+
                 if counter % 10 == 0:
                     with open(
                             os.path.join(CHECKPOINT_DIR, args.run_name, 'log'), 'a', encoding=args.encoding) as fp:

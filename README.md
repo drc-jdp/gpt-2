@@ -1,12 +1,11 @@
 # Docker Usage
 ## model parameter
-1.  --dataset { **dataset** } : the path to your data, both directory and file are ok
-2.  --run_name { **RN** } : dir to save model => CHECKPOINT_DIR/rn
-3.  --restore_from { **RF** } : 
-    * no  : pre-train the model only with the param in models/hparams.json and vocab
-    * latest  : train model with pre-trained model from CHECKPOINT_DIR/rf
-    * fresh : train model with origin model from models/mn
-4.  --learning_rate { **LR** } : default: 0.00002
+1.  --restore_from { `RF` } : 
+    * latest  : train model with pre-trained model from saving place
+      * need to have model in saving place
+    * no  : pre-train the model only with the params in models/hparams.json and vocab
+2.  --learning_rate { `LR` } : default: 0.00002
+3.  --val_dataset { `VAL_D` } : the folder or file being the dataset for validation
 
 ## CI/CD
 1. for **different model**, create new **branch** in GitHub
@@ -14,20 +13,23 @@
 2. modify the model in train.py or src/model.py
 3. push to GitHub, start CI/CD automatically
 4. type on server
-  * cpu  
+  * cpu
 ```bash
-docker run -e RESTORE_FROM={ RF } -e LEARNING_RATE={ LR } \
--itd -v {_local_dir_to_save_your_model_}:/home/storage/training --name dtp-training yqchenee/dtp-training:{tag}
+docker run -itd \
+-e RESTORE_FROM={ RF } -e LEARNING_RATE={ LR } -e VAL_DATASET={ VAL_D } \
+-v {_local_dir_to_save_your_model_}:/home/storage/training \
+-v {_local_dir_for_dataset}:/home/gpt-training/dataset \
+--name dtp-training yqchenee1/dtp-training:{tag}
 ```
   * gpu
 ```bash
-nvidia-docker run -e RESTORE_FROM={ RF } -e LEARNING_RATE={ LR } \
---privileged -itd \
+nvidia-docker run --privileged -itd \
+-e RESTORE_FROM={ RF } -e LEARNING_RATE={ LR } -e VAL_DATASET={ VAL_D } \
 -v {_local_dir_to_save_your_model_}:/home/storage/training \
 -v {_local_dir_for_dataset}:/home/gpt-training/dataset \
 -v /usr/local/nvidia-driver/nvidia_driver/410.129/lib:/usr/local/nvidia/lib \
 -v /usr/local/nvidia-driver/nvidia_driver/410.129/lib64:/usr/local/nvidia/lib64 \
---name dtp-training yqchenee/dtp-training:{tag}
+--name dtp-training yqchenee1/dtp-training:{tag}
 ```
 >  self-hosted?
 

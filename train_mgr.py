@@ -16,13 +16,6 @@ parser.add_argument('--val_dataset', type=str, default=None)
 def main(args):
     os.environ['PYTHONPATH'] = 'src'
     os.environ['CUDA_VISIBLE_DEVICES'] = '1'
-    # with open('../storage/training/log', 'a') as logFile:
-    #     logFile.write(
-    #         f"python train.py --dataset=dataset\
-    #         --save_every=1000 --model_name=ci_training\
-    #         --val_every=500  --val_batch_count=50 --sample_every=1000\
-    #         --restore_from={args.restore_from} --run_name=training --learning_rate={args.learning_rate}\n"
-    #         )
     t = 1
     p = subprocess.call([
             "python", "train.py", "--dataset=dataset",
