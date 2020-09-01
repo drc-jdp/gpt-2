@@ -22,8 +22,11 @@ docker run -e RESTORE_FROM={ RF } -e LEARNING_RATE={ LR } \
   * gpu
 ```bash
 nvidia-docker run -e RESTORE_FROM={ RF } -e LEARNING_RATE={ LR } \
---privileged -itd -v {_local_dir_to_save_your_model_}:/home/storage/training \
--v /usr/local/nvidia-driver/nvidia_driver/410.129/lib:/usr/local/nvidia/lib -v /usr/local/nvidia-driver/nvidia_driver/410.129/lib64:/usr/local/nvidia/lib64 \
+--privileged -itd \
+-v {_local_dir_to_save_your_model_}:/home/storage/training \
+-v {_local_dir_for_dataset}:/home/gpt-training/dataset \
+-v /usr/local/nvidia-driver/nvidia_driver/410.129/lib:/usr/local/nvidia/lib \
+-v /usr/local/nvidia-driver/nvidia_driver/410.129/lib64:/usr/local/nvidia/lib64 \
 --name dtp-training yqchenee/dtp-training:{tag}
 ```
 >  self-hosted?

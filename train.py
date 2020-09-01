@@ -155,12 +155,15 @@ def main():
         print('Loading checkpoint', ckpt)
         if args.restore_from != 'no':
             saver.restore(sess, ckpt)
+        else:
+            save()
 
         print('Loading dataset...')
         chunks = load_dataset(enc, args.dataset, args.combine, encoding=args.encoding)
         data_sampler = Sampler(chunks)
         if args.val_every > 0:
             if args.val_dataset:
+                print('Loading validation dataset...')
                 val_chunks = load_dataset(enc, args.val_dataset, args.combine, encoding=args.encoding)
             else:
                 val_chunks = chunks
@@ -171,15 +174,13 @@ def main():
             # Sample from validation set once with fixed seed to make
             # it deterministic during training as well as across runs.
             val_data_sampler = Sampler(val_chunks, seed=1)
-            # batch size = 2 , batchcount = 40
+            print('validation data has ', val_data_sampler.total_size, ' tokens')
             val_batches = [[val_data_sampler.sample(1024) for _ in range(args.val_batch_size)]
                            for _ in range(args.val_batch_count)]
 
         counter = 1
         counter_path = os.path.join(CHECKPOINT_DIR, args.run_name, 'counter')
         if os.path.exists(counter_path):
-            # Load the step number if we're resuming a run
-            # Add 1 so we don't immediately try to save again
             with open(counter_path, 'r') as fp:
                 counter = int(fp.read()) + 1
 
