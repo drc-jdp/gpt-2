@@ -106,3 +106,65 @@ for i in range(2):
 - sequence = sequence_length (n_ctx)
 
 ---
+
+## test
+```python
+import pytest
+import requests
+import re
+import os
+import random
+
+
+def t_expected_output(url: str, text: str, expect: str):
+    text = text.strip()
+    response = requests.post(f"{url}/autocomplete", json={
+        "text": text
+    })
+    if response.status_code > 200:
+        assert False, "http request should success"
+        return
+    results: dict = response.json()
+    assert "result" in results, "response should have key result"
+    results: list[str] = results.get("result")
+    found = False
+    for result in results:
+        if expect in result:
+            found = True
+            break
+    return found
+
+
+def t_files(url: str, filename: str):
+    filename = "dataset/" + filename
+    print(f"open {filename}")
+    with open(filename, 'r', encoding='utf-8') as openFile:
+        rule: str = openFile.read()
+        words: list[str] = rule.split(' ')
+    text = words[0] + ' '
+    li_exp = 1
+    num_correct = 0
+    while True:
+        print("text: ", text, "expect: ", words[li_exp])
+        correct = t_expected_output(
+            url,
+            text,
+            words[li_exp]
+        )
+        text = text + words[li_exp] + ' '
+        if correct:
+            num_correct += 1
+        li_exp += 1
+        if li_exp == len(words):
+            break
+    return (num_correct, len(words)-1)
+
+
+def test_fit_rules(url: str):
+    files: list = os.listdir('dataset/')
+    print(f"there are {len(files)} files in dataset/")
+    for i in range(5):
+        file_no = random.randrange(len(files))
+        nc, leng = t_files(url, files[file_no])
+        print(nc, leng)
+```
