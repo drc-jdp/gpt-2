@@ -31,4 +31,4 @@ COPY models/* ./models/ci_training/
 
 RUN mkdir dataset
 
-CMD /bin/bash /usr/bin/boot.sh ${RESTORE_FROM:-no} ${LEARNING_RATE:-0.00002} ${VAL_DATASET:-}
+CMD /bin/bash /usr/bin/boot.sh ${RESTORE_FROM:-no} ${LEARNING_RATE:-0.00002} ${VAL_DATASET:-} ${SAVE_EVERY:-1000}

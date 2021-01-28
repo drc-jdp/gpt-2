@@ -11,6 +11,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument('restore_from', type=str, default='no', help='"latest", "fresh", "no"')
 parser.add_argument('--learning_rate', type=float, default=0.00002, help='Learning rate for Adam')
 parser.add_argument('--val_dataset', type=str, default=None)
+parser.add_argument('--save_every', type=int, default=1000)
 
 
 def main(args):
@@ -19,7 +20,7 @@ def main(args):
     t = 1
     p = subprocess.call([
             "python", "train.py", "--dataset=dataset",
-            "--save_every=1000", "--model_name=ci_training",
+            f"--save_every={args.save_every}", "--model_name=ci_training",
             "--val_every=500", "--val_batch_count=50",
             f"--val_dataset={args.val_dataset}",
             "--sample_every=1000", "--run_name=training",
@@ -29,7 +30,7 @@ def main(args):
     while True:
         p = subprocess.call([
             "python", "train.py", "--dataset=dataset",
-            "--save_every=1000", "--model_name=ci_training",
+            f"--save_every={args.save_every}", "--model_name=ci_training",
             "--val_every=500", "--val_batch_count=50",
             f"--val_dataset={args.val_dataset}",
             "--sample_every=1000", "--run_name=training",
