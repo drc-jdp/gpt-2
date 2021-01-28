@@ -11,16 +11,17 @@ parser = argparse.ArgumentParser(
 parser.add_argument('restore_from', type=str, default='no', help='"latest", "fresh", "no"')
 parser.add_argument('--learning_rate', type=float, default=0.00002, help='Learning rate for Adam')
 parser.add_argument('--val_dataset', type=str, default=None)
-parser.add_argument('--save_every', type=int, default=1000)
+parser.add_argument('--save_every', type=str, default='1000')
 
 
 def main(args):
+    save_every = int(args.save_every)
     os.environ['PYTHONPATH'] = 'src'
     os.environ['CUDA_VISIBLE_DEVICES'] = '1'
     t = 1
     p = subprocess.call([
             "python", "train.py", "--dataset=dataset",
-            f"--save_every={args.save_every}", "--model_name=ci_training",
+            f"--save_every={save_every}", "--model_name=ci_training",
             "--val_every=500", "--val_batch_count=50",
             f"--val_dataset={args.val_dataset}",
             "--sample_every=1000", "--run_name=training",
@@ -30,7 +31,7 @@ def main(args):
     while True:
         p = subprocess.call([
             "python", "train.py", "--dataset=dataset",
-            f"--save_every={args.save_every}", "--model_name=ci_training",
+            f"--save_every={save_every}", "--model_name=ci_training",
             "--val_every=500", "--val_batch_count=50",
             f"--val_dataset={args.val_dataset}",
             "--sample_every=1000", "--run_name=training",
