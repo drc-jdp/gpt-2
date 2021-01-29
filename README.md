@@ -6,6 +6,7 @@
     * no  : pre-train the model only with the params in models/hparams.json and vocab
 2.  --learning_rate { `LR` } : default: 0.00002
 3.  --val_dataset { `VAL_D` } : the folder or file being the dataset for validation
+4.  --save_every {`SAVE_EVERY` } : save the model for each `SAVE_EVERY` batch
 
 ## CI/CD
 1. for **different model**, create new **branch** in GitHub
@@ -16,7 +17,7 @@
   * cpu
 ```bash
 docker run -itd \
--e RESTORE_FROM={ RF } -e LEARNING_RATE={ LR } -e VAL_DATASET={ VAL_D } \
+-e RESTORE_FROM={ RF } -e LEARNING_RATE={ LR } -e VAL_DATASET={ VAL_D } -e SAVE_EVERY={ SAVE_EVERY } \
 -v {_local_dir_to_save_your_model_}:/home/storage/training \
 -v {_local_dir_for_dataset}:/home/gpt-training/dataset \
 --name dtp-training yqchenee1/dtp-training:{tag}
@@ -24,7 +25,7 @@ docker run -itd \
   * gpu
 ```bash
 nvidia-docker run --privileged -itd \
--e RESTORE_FROM={ RF } -e LEARNING_RATE={ LR } -e VAL_DATASET={ VAL_D } \
+-e RESTORE_FROM={ RF } -e LEARNING_RATE={ LR } -e VAL_DATASET={ VAL_D } -e SAVE_EVERY={ SAVE_EVERY } \
 -v {_local_dir_to_save_your_model_}:/home/storage/training \
 -v {_local_dir_for_dataset}:/home/gpt-training/dataset \
 -v /usr/local/nvidia-driver/nvidia_driver/410.129/lib:/usr/local/nvidia/lib \
@@ -52,7 +53,6 @@ PYTHONPATH=src CUDA_VISIBLE_DEVICES=1 python train.py --dataset dataset --save_e
 
 ## validation
 -  need approve?:
-  - use the same tokens all the time.
 
 ---
 
