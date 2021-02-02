@@ -6,7 +6,9 @@
     * no  : pre-train the model only with the params in models/hparams.json and vocab
 2.  --learning_rate { `LR` } : default: 0.00002
 3.  --val_dataset { `VAL_D` } : the folder or file being the dataset for validation
-4.  --save_every {`SAVE_EVERY` } : save the model for each `SAVE_EVERY` batch
+4.  --save_every { `SAVE_EVERY` } : save the model for each `SAVE_EVERY` batch
+5.  --val_every { `VAL_EVERY` } : default: 100
+6.  --val_batch {`VAL_B` } : default: 20
 
 ## CI/CD
 1. for **different model**, create new **branch** in GitHub
@@ -17,7 +19,8 @@
   * cpu
 ```bash
 docker run -itd \
--e RESTORE_FROM={ RF } -e LEARNING_RATE={ LR } -e VAL_DATASET={ VAL_D } -e SAVE_EVERY={ SAVE_EVERY } \
+-e RESTORE_FROM={ RF } -e LEARNING_RATE={ LR } -e SAVE_EVERY={ SAVE_EVERY } \
+-e VAL_DATASET={ VAL_D } -e VAL_EVERY={ VAL_EVERY } -e VAL_BATCH={ VAL_B } \
 -v {_local_dir_to_save_your_model_}:/home/storage/training \
 -v {_local_dir_for_dataset}:/home/gpt-training/dataset \
 --name dtp-training yqchenee1/dtp-training:{tag}
@@ -25,7 +28,8 @@ docker run -itd \
   * gpu
 ```bash
 nvidia-docker run --privileged -itd \
--e RESTORE_FROM={ RF } -e LEARNING_RATE={ LR } -e VAL_DATASET={ VAL_D } -e SAVE_EVERY={ SAVE_EVERY } \
+-e RESTORE_FROM={ RF } -e LEARNING_RATE={ LR } -e SAVE_EVERY={ SAVE_EVERY } \
+-e VAL_DATASET={ VAL_D } -e VAL_EVERY={ VAL_EVERY } -e VAL_BATCH={ VAL_B } \
 -v {_local_dir_to_save_your_model_}:/home/storage/training \
 -v {_local_dir_for_dataset}:/home/gpt-training/dataset \
 -v /usr/local/nvidia-driver/nvidia_driver/410.129/lib:/usr/local/nvidia/lib \
