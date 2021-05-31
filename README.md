@@ -20,7 +20,7 @@
             ├── checkpoint
             └── log                     # training result
 ### Usage
-#### Container Environment Parameters
+#### Environment Variables
 1.  `RESTORE_FROM` : string, optional with default=no
     * "latest"  : train model with pre-trained model from saving place
       * need to have model in saving place
@@ -49,7 +49,7 @@
 4. tag or pull request will start CI/CD to push to [Docker Hub](https://hub.docker.com/repository/docker/yqchenee1/dtp-training) automatically
 5. type on server
 
-  * cpu
+Cpu (all the environment variables can be adapted to your preferences)
 ```shell
 docker run -itd [--gpus all] \
 -e RESTORE_FROM=no -e LEARNING_RATE=0.00002 -e SAVE_EVERY=1000 \
@@ -60,7 +60,7 @@ docker run -itd [--gpus all] \
 --name dtp-training yqchenee1/dtp-training:{tag}
 ```
 
-  * gpu for old nvidia-docker in tsmc
+Gpu for old nvidia-docker in tsmc
 ```shell
 nvidia-docker run --privileged -itd \
 -e RESTORE_FROM=no -e LEARNING_RATE=0.00002 -e SAVE_EVERY=1000 \
