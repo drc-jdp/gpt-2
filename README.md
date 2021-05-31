@@ -1,42 +1,76 @@
-# Docker Usage
-## model parameter
-1.  --restore_from { `RF` } : 
-    * latest  : train model with pre-trained model from saving place
+### Container Folder Structure
+    home
+    ├── gpt-training                   
+        ├── *.py                        
+        ├── src
+            └──  *.py
+        ├── models
+            └──  ci_training
+                ├── encoder.json
+                ├── vocab.bpe
+                └── hparam.json
+        ├── dataset                     # training dataset
+        ├── val_dataset                 # exists if VAL_DATA is specified
+    └──  storage
+        └── training                    # saving trained models
+            ├── model-54000.meta
+            ├── model-54000.data-00000-of-00001
+            ├── model-54000.index
+            ├── checkpoint
+            └── log                     # training result
+### Usages
+#### Container Parameters
+1.  --restore_from `RF` : string, optional with default=no
+    * "latest"  : train model with pre-trained model from saving place
       * need to have model in saving place
-    * no  : pre-train the model only with the params in models/hparams.json and vocab
-2.  --learning_rate { `LR` } : default: 0.00002
-3.  --val_dataset { `VAL_D` } : the folder or file being the dataset for validation
-4.  --save_every { `SAVE_EVERY` } : save the model for each `SAVE_EVERY` batch
-5.  --val_every { `VAL_EVERY` } : default: 100
-6.  --val_batch {`VAL_B` } : default: 20
+    * "no"  : pre-train the model only with the params in models/hparams.json and vocab
+2.  --learning_rate `LR` : float, optional with default=0.00002
+3.  --val_dataset `VAL_DATA` : string, optional with default=dataset
+    * the folder or file being the dataset for validation, the same as training data if not specified
+4.  --save_every `SAVE_EVERY` : int, optional with default=1000
+    * save the model for each `SAVE_EVERY` batch
+5.  --val_every `VAL_EVERY` : int, optional with default=100
+    * Calculate validation loss every `VAL_EVERY` steps
+6.  --val_batch `VAL_B` : int, optional with default=20
+    * Number of batches for validation
 
-## CI/CD
+#### Volumes
+* `local_dir/of/your/val_dataset` - location of validating data
+  * required if `VAL_DATA` is specified
+* `local_dir/to/save/your/model` - location to save your trained model
+* `local_dir/of/your/dataset` - location of training data
+
+### CI/CD
 1. for **different model**, create new **branch** in GitHub
-1. modify the hparams, vocab, encoder in {models/}
-2. modify the model in train.py or src/model.py
-3. push to GitHub, start CI/CD automatically
-4. type on server
+1. modify the hparams, vocab, encoder in [models/](./models)
+2. modify the model in [train.py](./train.py) or [src/model.py](./src/model.py)
+3. push to GitHub
+4. tag or pull request will start CI/CD automatically
+5. type on server
+
   * cpu
-```bash
-docker run -itd \
--e RESTORE_FROM={ RF } -e LEARNING_RATE={ LR } -e SAVE_EVERY={ SAVE_EVERY } \
--e VAL_DATASET={ VAL_D } -e VAL_EVERY={ VAL_EVERY } -e VAL_BATCH={ VAL_B } \
--v {_local_dir_to_save_your_model_}:/home/storage/training \
--v {_local_dir_for_dataset}:/home/gpt-training/dataset \
+```shell
+docker run -itd [--gpus all] \
+-e RESTORE_FROM=no -e LEARNING_RATE=0.00002 -e SAVE_EVERY=1000 \
+-e VAL_EVERY=100 -e VAL_BATCH=20 \
+-e VAL_DATASET=val_dataset  -v local_dir/of/your/val_dataset:/home/storage/val_dataset \
+-v local_dir/to/save/your/model:/home/storage/training \
+-v local_dir/of/your/dataset:/home/gpt-training/dataset \
 --name dtp-training yqchenee1/dtp-training:{tag}
 ```
-  * gpu
-```bash
+
+  * gpu for old nvidia-docker in tsmc
+```shell
 nvidia-docker run --privileged -itd \
--e RESTORE_FROM={ RF } -e LEARNING_RATE={ LR } -e SAVE_EVERY={ SAVE_EVERY } \
--e VAL_DATASET={ VAL_D } -e VAL_EVERY={ VAL_EVERY } -e VAL_BATCH={ VAL_B } \
--v {_local_dir_to_save_your_model_}:/home/storage/training \
--v {_local_dir_for_dataset}:/home/gpt-training/dataset \
+-e RESTORE_FROM=no -e LEARNING_RATE=0.00002 -e SAVE_EVERY=1000 \
+-e VAL_EVERY=100 -e VAL_BATCH=20 \
+-e VAL_DATASET=VAL_D  -v local_dir/of/your/val_dataset:/home/storage/VAL_D \
+-v local_dir/to/save/your/model:/home/storage/training \
+-v local_dir/of/your/dataset:/home/gpt-training/dataset \
 -v /usr/local/nvidia-driver/nvidia_driver/410.129/lib:/usr/local/nvidia/lib \
 -v /usr/local/nvidia-driver/nvidia_driver/410.129/lib64:/usr/local/nvidia/lib64 \
 --name dtp-training yqchenee1/dtp-training:{tag}
 ```
->  self-hosted?
 
 ----
 
