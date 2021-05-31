@@ -1,4 +1,4 @@
-### Container Folder Structure
+### Container's Folder Structure
     home
     ├── gpt-training                   
         ├── *.py                        
@@ -10,7 +10,7 @@
                 ├── vocab.bpe
                 └── hparam.json
         ├── dataset                     # training dataset
-        ├── val_dataset                 # exists if VAL_DATA is specified
+        └── val_dataset                 # exists if VAL_DATA is specified
     └──  storage
         └── training                    # saving trained models
             ├── model-54000.meta
@@ -19,7 +19,7 @@
             ├── checkpoint
             └── log                     # training result
 ### Usages
-#### Container Parameters
+#### Container's Parameters
 1.  --restore_from `RF` : string, optional with default=no
     * "latest"  : train model with pre-trained model from saving place
       * need to have model in saving place
@@ -45,7 +45,7 @@
 1. modify the hparams, vocab, encoder in [models/](./models)
 2. modify the model in [train.py](./train.py) or [src/model.py](./src/model.py)
 3. push to GitHub
-4. tag or pull request will start CI/CD automatically
+4. tag or pull request will start CI/CD to push to [Docker Hub](https://hub.docker.com/repository/docker/yqchenee1/dtp-training) automatically
 5. type on server
 
   * cpu
