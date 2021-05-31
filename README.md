@@ -1,44 +1,45 @@
+## DTP-Training
 ### Container's Folder Structure
     home
     ├── gpt-training                   
         ├── *.py                        
         ├── src
-            └──  *.py
+            └── *.py
         ├── models
-            └──  ci_training
+            └── ci_training             # model_name (copy from ./models)
                 ├── encoder.json
                 ├── vocab.bpe
                 └── hparam.json
-        ├── dataset                     # training dataset
-        └── val_dataset                 # exists if VAL_DATA is specified
-    └──  storage
-        └── training                    # saving trained models
+        ├── dataset                     # training dataset (volume from local)
+        └── val_dataset                 # exists if VAL_DATA is specified (volume from local)
+    └── storage
+        └── training                    # saving trained models, run_name (volume from local)
             ├── model-54000.meta
             ├── model-54000.data-00000-of-00001
             ├── model-54000.index
             ├── checkpoint
             └── log                     # training result
-### Usages
-#### Container's Parameters
-1.  --restore_from `RF` : string, optional with default=no
+### Usage
+#### Container Environment Parameters
+1.  `RESTORE_FROM` : string, optional with default=no
     * "latest"  : train model with pre-trained model from saving place
       * need to have model in saving place
     * "no"  : pre-train the model only with the params in models/hparams.json and vocab
-2.  --learning_rate `LR` : float, optional with default=0.00002
-3.  --val_dataset `VAL_DATA` : string, optional with default=dataset
+2.  `LEARNING_RATE` : float, optional with default=0.00002
+3.  `VAL_DATASET` : string, optional with default=dataset
     * the folder or file being the dataset for validation, the same as training data if not specified
-4.  --save_every `SAVE_EVERY` : int, optional with default=1000
+4.  `SAVE_EVERY` : int, optional with default=1000
     * save the model for each `SAVE_EVERY` batch
-5.  --val_every `VAL_EVERY` : int, optional with default=100
+5.  `VAL_EVERY` : int, optional with default=100
     * Calculate validation loss every `VAL_EVERY` steps
-6.  --val_batch `VAL_B` : int, optional with default=20
+6.  `VAL_BATCH` : int, optional with default=20
     * Number of batches for validation
 
 #### Volumes
-* `local_dir/of/your/val_dataset` - location of validating data
+* `local_dir/of/your/val_dataset` - directory of validating dataset
   * required if `VAL_DATA` is specified
-* `local_dir/to/save/your/model` - location to save your trained model
-* `local_dir/of/your/dataset` - location of training data
+* `local_dir/to/save/your/model` - directory to save your trained model
+* `local_dir/of/your/dataset` - directory of training dataset
 
 ### CI/CD
 1. for **different model**, create new **branch** in GitHub
